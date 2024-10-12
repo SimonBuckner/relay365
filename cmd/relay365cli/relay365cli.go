@@ -4,25 +4,26 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/SimonBuckner/relay365"
-	"github.com/SimonBuckner/relay365/graphhelper"
+	"github.com/simonbuckner/relay365/graphhelper"
+
 	"github.com/joho/godotenv"
 )
 
 func main() {
-	fmt.Println("Go Graph Tutorial")
+	fmt.Println("Go Graph App-Only Tutorial")
 	fmt.Println()
 
+	// Load .env files
+	// .env.local takes precedence (if present)
+	godotenv.Load(".env.local")
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env" + err.Error())
+		log.Fatal("Error loading .env")
 	}
 
 	graphHelper := graphhelper.NewGraphHelper()
 
-	relay365.InitializeGraph(graphHelper)
-
-	relay365.GreetUser(graphHelper)
+	initializeGraph(graphHelper)
 
 	var choice int64 = -1
 
@@ -30,9 +31,8 @@ func main() {
 		fmt.Println("Please choose one of the following options:")
 		fmt.Println("0. Exit")
 		fmt.Println("1. Display access token")
-		fmt.Println("2. List my inbox")
-		fmt.Println("3. Send mail")
-		fmt.Println("4. Make a Graph call")
+		fmt.Println("2. List users")
+		fmt.Println("3. Make a Graph call")
 
 		_, err = fmt.Scanf("%d", &choice)
 		if err != nil {
@@ -45,16 +45,13 @@ func main() {
 			fmt.Println("Goodbye...")
 		case 1:
 			// Display access token
-			relay365.DisplayAccessToken(graphHelper)
+			displayAccessToken(graphHelper)
 		case 2:
-			// List emails from user's inbox
-			relay365.ListInbox(graphHelper)
+			// List users
+			listUsers(graphHelper)
 		case 3:
-			// Send an email message
-			relay365.SendMail(graphHelper)
-		case 4:
 			// Run any Graph code
-			relay365.MakeGraphCall(graphHelper)
+			makeGraphCall(graphHelper)
 		default:
 			fmt.Println("Invalid choice! Please try again.")
 		}
@@ -63,4 +60,29 @@ func main() {
 			break
 		}
 	}
+}
+
+func initializeGraph(graphHelper *graphhelper.GraphHelper) {
+	err := graphHelper.InitializeGraphForAppAuth()
+	if err != nil {
+		log.Panicf("Error initializing Graph for app auth: %v\n", err)
+	}
+}
+
+func displayAccessToken(graphHelper *graphhelper.GraphHelper) {
+	token, err := graphHelper.GetAppToken()
+	if err != nil {
+		log.Panicf("Error getting user token: %v\n", err)
+	}
+
+	fmt.Printf("App-only token: %s", *token)
+	fmt.Println()
+}
+
+func listUsers(graphHelper *graphhelper.GraphHelper) {
+	// TODO
+}
+
+func makeGraphCall(graphHelper *graphhelper.GraphHelper) {
+	// TODO
 }
