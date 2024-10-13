@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
+	"github.com/eiannone/keyboard"
 	"github.com/simonbuckner/relay365/graphhelper"
 
 	"github.com/joho/godotenv"
@@ -25,39 +27,44 @@ func main() {
 
 	initializeGraph(graphHelper)
 
-	var choice int64 = -1
+	if err := keyboard.Open(); err != nil {
+		panic(err)
+	}
+	defer func() {
+		_ = keyboard.Close()
+	}()
+
+	var choice rune
+	// var key keyboard.Key
 
 	for {
 		fmt.Println("Please choose one of the following options:")
 		fmt.Println("0. Exit")
 		fmt.Println("1. Display access token")
 		fmt.Println("2. List users")
-		fmt.Println("3. Make a Graph call")
+		fmt.Println("3. Send email")
 
-		_, err = fmt.Scanf("%d", &choice)
+		choice, _, err = keyboard.GetSingleKey()
 		if err != nil {
-			choice = -1
+			choice = rune('!')
 		}
 
 		switch choice {
-		case 0:
+		case rune('0'):
 			// Exit the program
 			fmt.Println("Goodbye...")
-		case 1:
+			os.Exit(0)
+		case rune('1'):
 			// Display access token
 			displayAccessToken(graphHelper)
-		case 2:
+		case rune('2'):
 			// List users
 			listUsers(graphHelper)
-		case 3:
-			// Run any Graph code
-			makeGraphCall(graphHelper)
+		case rune('3'):
+			// Send Email
+			sendMail(graphHelper)
 		default:
 			fmt.Println("Invalid choice! Please try again.")
-		}
-
-		if choice == 0 {
-			break
 		}
 	}
 }
@@ -80,9 +87,68 @@ func displayAccessToken(graphHelper *graphhelper.GraphHelper) {
 }
 
 func listUsers(graphHelper *graphhelper.GraphHelper) {
-	// TODO
+	var nextUrl *string = nil
+	var choice rune
+
+	for {
+		fmt.Printf("NextURL: %v\n", nextUrl)
+		users, err := graphHelper.GetUsers(nextUrl)
+		if err != nil {
+			log.Panicf("Error getting users: %v", err)
+		}
+
+		// Output each user's details
+		for _, user := range users.GetValue() {
+			fmt.Printf("User: %s\n", *user.GetDisplayName())
+			fmt.Printf("  ID: %s\n", *user.GetId())
+
+			noEmail := "NO EMAIL"
+			email := user.GetMail()
+			if email == nil {
+				email = &noEmail
+			}
+			fmt.Printf("  Email: %s\n", *email)
+		}
+
+		// If GetOdataNextLink does not return nil,
+		// there are more users available on the server
+		nextUrl = users.GetOdataNextLink()
+
+		fmt.Println()
+		fmt.Printf("More users available? %t\n", nextUrl != nil)
+
+		if nextUrl == nil {
+			break
+		}
+
+		fmt.Printf("")
+		fmt.Printf("NextURL: %v\n", nextUrl)
+		fmt.Printf("Display the next page? Y/N: ")
+
+		choice, _, err = keyboard.GetSingleKey()
+		if err != nil {
+			continue
+		}
+
+		if choice != rune('Y') && choice != rune('y') {
+			return
+		}
+		fmt.Printf("")
+	}
 }
 
-func makeGraphCall(graphHelper *graphhelper.GraphHelper) {
-	// TODO
+func sendMail(graphHelper *graphhelper.GraphHelper) {
+
+	from := "simon.buckner@hotmail.com"
+	subject := "Testing Microsoft Graph"
+	body := "Hello world!"
+	to := "simonbuckner@hotmail.com"
+
+	err := graphHelper.SendMail(&from, &subject, &body, &to)
+	if err != nil {
+		log.Panicf("Error sending mail: %v", err)
+	}
+
+	fmt.Println("Mail sent.")
+	fmt.Println()
 }
