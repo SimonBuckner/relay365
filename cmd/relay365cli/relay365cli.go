@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/eiannone/keyboard"
 	"github.com/simonbuckner/relay365/graphhelper"
@@ -43,6 +44,7 @@ func main() {
 		fmt.Println("1. Display access token")
 		fmt.Println("2. List users")
 		fmt.Println("3. Send email")
+		fmt.Println("4. List inbox")
 
 		choice, _, err = keyboard.GetSingleKey()
 		if err != nil {
@@ -63,6 +65,9 @@ func main() {
 		case rune('3'):
 			// Send Email
 			sendMail(graphHelper)
+		case rune('4'):
+			// Send Email
+			listInbox(graphHelper)
 		default:
 			fmt.Println("Invalid choice! Please try again.")
 		}
@@ -139,7 +144,7 @@ func listUsers(graphHelper *graphhelper.GraphHelper) {
 
 func sendMail(graphHelper *graphhelper.GraphHelper) {
 
-	from := "simon.buckner@hotmail.com"
+	from := "simon.buckner@gmal.co.uk"
 	subject := "Testing Microsoft Graph"
 	body := "Hello world!"
 	to := "simonbuckner@hotmail.com"
@@ -150,5 +155,43 @@ func sendMail(graphHelper *graphhelper.GraphHelper) {
 	}
 
 	fmt.Println("Mail sent.")
+	fmt.Println()
+}
+
+func listInbox(graphHelper *graphhelper.GraphHelper) {
+	messages, err := graphHelper.GetInbox("simon.buckner@gmal.co.uk")
+	if err != nil {
+		log.Panicf("Error getting user's inbox: %v", err)
+	}
+
+	// Load local time zone
+	// Dates returned by Graph are in UTC, use this
+	// to convert to local
+	location, err := time.LoadLocation("Local")
+	if err != nil {
+		log.Panicf("Error getting local timezone: %v", err)
+	}
+
+	// Output each message's details
+	for _, message := range messages.GetValue() {
+		fmt.Printf("Message: %s\n", *message.GetSubject())
+		fmt.Printf("  From: %s\n", *message.GetFrom().GetEmailAddress().GetName())
+
+		status := "Unknown"
+		if *message.GetIsRead() {
+			status = "Read"
+		} else {
+			status = "Unread"
+		}
+		fmt.Printf("  Status: %s\n", status)
+		fmt.Printf("  Received: %s\n", (*message.GetReceivedDateTime()).In(location))
+	}
+
+	// If GetOdataNextLink does not return nil,
+	// there are more messages available on the server
+	nextLink := messages.GetOdataNextLink()
+
+	fmt.Println()
+	fmt.Printf("More messages available? %t\n", nextLink != nil)
 	fmt.Println()
 }

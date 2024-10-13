@@ -16,7 +16,6 @@ import (
 type GraphHelper struct {
 	clientSecretCredential *azidentity.ClientSecretCredential
 	appClient              *msgraphsdk.GraphServiceClient
-	userClient             *msgraphsdk.GraphServiceClient
 }
 
 func NewGraphHelper() *GraphHelper {
@@ -75,7 +74,7 @@ func (g *GraphHelper) GetUser(userId string) (models.Userable, error) {
 		Select: []string{"displayName", "mail", "userPrincipalName"},
 	}
 
-	return g.userClient.Users().ByUserId(userId).Get(context.Background(),
+	return g.appClient.Users().ByUserId(userId).Get(context.Background(),
 		&users.UserItemRequestBuilderGetRequestConfiguration{
 			QueryParameters: &query,
 		})
@@ -117,6 +116,8 @@ func (g *GraphHelper) SendMail(from *string, subject *string, body *string, reci
 	fromRecipient := newRecipient(*from)
 	message.SetFrom(fromRecipient)
 
+	message.SetReplyTo([]models.Recipientable{fromRecipient})
+
 	toRecipient := newRecipient(*recipient)
 	message.SetToRecipients([]models.Recipientable{
 		toRecipient,
@@ -131,11 +132,7 @@ func (g *GraphHelper) SendMail(from *string, subject *string, body *string, reci
 	sendMailBody := users.NewItemSendMailPostRequestBody()
 	sendMailBody.SetMessage(message)
 
-	g.
-		// Send the message
-		me := g.userClient.Me()
-	sender := me.SendMail()
-	return sender.Post(context.Background(), sendMailBody, nil)
+	return g.appClient.Users().ByUserId(*from).SendMail().Post(context.Background(), sendMailBody, nil)
 }
 
 func newRecipient(email string) *models.Recipient {
@@ -144,4 +141,24 @@ func newRecipient(email string) *models.Recipient {
 	address.SetAddress(&email)
 	recipient.SetEmailAddress(address)
 	return recipient
+}
+
+func (g *GraphHelper) GetInbox(userId string) (models.MessageCollectionResponseable, error) {
+	var topValue int32 = 25
+	query := users.ItemMailFoldersItemMessagesRequestBuilderGetQueryParameters{
+		// Only request specific properties
+		Select: []string{"from", "isRead", "receivedDateTime", "subject"},
+		// Get at most 25 results
+		Top: &topValue,
+		// Sort by received time, newest first
+		Orderby: []string{"receivedDateTime DESC"},
+	}
+
+	return g.appClient.Users().ByUserId(userId).MailFolders().
+		ByMailFolderId("inbox").
+		Messages().
+		Get(context.Background(),
+			&users.ItemMailFoldersItemMessagesRequestBuilderGetRequestConfiguration{
+				QueryParameters: &query,
+			})
 }
