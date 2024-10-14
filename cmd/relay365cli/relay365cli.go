@@ -36,7 +36,8 @@ func main() {
 	}()
 
 	var choice rune
-	// var key keyboard.Key
+	fromEmail := os.Getenv("FROM_EMAIL")
+	toEmail := os.Getenv("TO_EMAIL")
 
 	for {
 		fmt.Println("Please choose one of the following options:")
@@ -64,10 +65,10 @@ func main() {
 			listUsers(graphHelper)
 		case rune('3'):
 			// Send Email
-			sendMail(graphHelper)
+			sendMail(graphHelper, fromEmail, toEmail)
 		case rune('4'):
 			// Send Email
-			listInbox(graphHelper)
+			listInbox(graphHelper, fromEmail)
 		default:
 			fmt.Println("Invalid choice! Please try again.")
 		}
@@ -75,7 +76,10 @@ func main() {
 }
 
 func initializeGraph(graphHelper *graphhelper.GraphHelper) {
-	err := graphHelper.InitializeGraphForAppAuth()
+	tenantId := os.Getenv("TENANT_ID")
+	clientId := os.Getenv("CLIENT_ID")
+	clientSecret := os.Getenv("CLIENT_SECRET")
+	err := graphHelper.InitializeGraphForAppAuth(tenantId, clientId, clientSecret)
 	if err != nil {
 		log.Panicf("Error initializing Graph for app auth: %v\n", err)
 	}
@@ -142,14 +146,12 @@ func listUsers(graphHelper *graphhelper.GraphHelper) {
 	}
 }
 
-func sendMail(graphHelper *graphhelper.GraphHelper) {
+func sendMail(graphHelper *graphhelper.GraphHelper, fromEmail, toEmail string) {
 
-	from := "simon.buckner@gmal.co.uk"
 	subject := "Testing Microsoft Graph"
 	body := "Hello world!"
-	to := "simonbuckner@hotmail.com"
 
-	err := graphHelper.SendMail(&from, &subject, &body, &to)
+	err := graphHelper.SendMail(&fromEmail, &subject, &body, &toEmail)
 	if err != nil {
 		log.Panicf("Error sending mail: %v", err)
 	}
@@ -158,8 +160,8 @@ func sendMail(graphHelper *graphhelper.GraphHelper) {
 	fmt.Println()
 }
 
-func listInbox(graphHelper *graphhelper.GraphHelper) {
-	messages, err := graphHelper.GetInbox("simon.buckner@gmal.co.uk")
+func listInbox(graphHelper *graphhelper.GraphHelper, userId string) {
+	messages, err := graphHelper.GetInbox(userId)
 	if err != nil {
 		log.Panicf("Error getting user's inbox: %v", err)
 	}

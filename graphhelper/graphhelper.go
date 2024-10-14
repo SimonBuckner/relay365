@@ -3,7 +3,6 @@ package graphhelper
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
@@ -23,10 +22,10 @@ func NewGraphHelper() *GraphHelper {
 	return g
 }
 
-func (g *GraphHelper) InitializeGraphForAppAuth() error {
-	clientId := os.Getenv("CLIENT_ID")
-	tenantId := os.Getenv("TENANT_ID")
-	clientSecret := os.Getenv("CLIENT_SECRET")
+func (g *GraphHelper) InitializeGraphForAppAuth(tenantId, clientId, clientSecret string) error {
+	// clientId := os.Getenv("CLIENT_ID")
+	// tenantId := os.Getenv("TENANT_ID")
+	// clientSecret := os.Getenv("CLIENT_SECRET")
 	credential, err := azidentity.NewClientSecretCredential(tenantId, clientId, clientSecret, nil)
 	if err != nil {
 		return err
